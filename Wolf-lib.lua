@@ -837,6 +837,13 @@ function Wolf:CreateWindow(config)
 	FloatGlow.Transparency = 1
 	FloatGlow.Parent = FloatBtn
 
+	local FloatHit = Instance.new("TextButton")
+	FloatHit.BackgroundTransparency = 1
+	FloatHit.AutoButtonColor = false
+	FloatHit.Text = ""
+	FloatHit.ZIndex = 13
+	FloatHit.Parent = FloatBtn
+
 	if hasOpenIcon then
 		local fullImg = Instance.new("ImageLabel")
 		fullImg.Size = UDim2.fromScale(1, 1)
@@ -846,6 +853,10 @@ function Wolf:CreateWindow(config)
 		fullImg.ImageColor3 = Color3.new(1, 1, 1)
 		fullImg.ZIndex = 12
 		fullImg.Parent = FloatBtn
+
+		FloatHit.AnchorPoint = Vector2.new(0.5, 0.5)
+		FloatHit.Position = UDim2.new(0.5, 0, 0.5, 0)
+		FloatHit.Size = UDim2.fromOffset(84, 84)
 	else
 		local fIconHolder = Instance.new("Frame")
 		fIconHolder.Size = UDim2.fromOffset(30, 30)
@@ -873,6 +884,9 @@ function Wolf:CreateWindow(config)
 		fTxt.TextXAlignment = Enum.TextXAlignment.Left
 		fTxt.ZIndex = 12
 		fTxt.Parent = FloatBtn
+
+		FloatHit.Position = UDim2.new(0, 0, 0, 0)
+		FloatHit.Size = UDim2.new(1, -30, 1, 0)
 	end
 
 	local winOpen = true
@@ -908,7 +922,7 @@ function Wolf:CreateWindow(config)
 	end
 
 	MinBtn.MouseButton1Click:Connect(CloseWindow)
-	FloatBtn.MouseButton1Click:Connect(OpenWindow)
+	FloatHit.MouseButton1Click:Connect(OpenWindow)
 
 	Track(UserInputService.InputBegan:Connect(function(input, gpe)
 		if not gpe and input.KeyCode == toggleKey then
@@ -1555,13 +1569,13 @@ function Wolf:CreateWindow(config)
 				local flag = c.Flag
 				if flag and Wolf.Flags[flag] ~= nil then default = Wolf.Flags[flag] end
 
-				local rowH = (desc ~= "" and 96 or 70)
+				local rowH = (desc ~= "" and 78 or 46)
 				local row, stroke, accentBar = RegisterRow(rowH)
 				row.Parent = container
 				ApplyDependsOn(row, c)
 
 				local lbl = Instance.new("TextLabel")
-				lbl.Size = UDim2.new(1, -20, 0, 18)
+				lbl.Size = UDim2.new(1, -78, 0, 18)
 				lbl.Position = UDim2.new(0, 14, 0, 10)
 				lbl.BackgroundTransparency = 1
 				lbl.Text = name
@@ -1576,7 +1590,7 @@ function Wolf:CreateWindow(config)
 				if desc ~= "" then
 					local dLbl = Instance.new("TextLabel")
 					dLbl.Size = UDim2.new(1, -24, 0, 28)
-					dLbl.Position = UDim2.new(0, 14, 0, 30)
+					dLbl.Position = UDim2.new(0, 14, 0, 34)
 					dLbl.BackgroundTransparency = 1
 					dLbl.Text = desc
 					dLbl.Font = Enum.Font.Gotham
@@ -1589,44 +1603,59 @@ function Wolf:CreateWindow(config)
 					dLbl.Parent = row
 				end
 
-				local box = Instance.new("TextButton")
-				box.Size = UDim2.new(1, -24, 0, 26)
-				box.Position = UDim2.new(0, 12, 0, desc ~= "" and 62 or 36)
-				box.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
-				box.Text = default and "ON" or "OFF"
-				box.Font = Enum.Font.GothamBold
-				box.TextSize = 12
-				box.TextColor3 = default and Theme.Accent or Color3.fromRGB(180, 180, 180)
-				box.ZIndex = 8
-				box.Parent = row
-				Round(6, box)
-				local boxStroke = Outline(box, Theme.Accent, 1, default and 0.3 or 0.7)
+				local switchW, switchH, knobSize, inset = 42, 22, 18, 2
+				local track = Instance.new("TextButton")
+				track.AnchorPoint = Vector2.new(1, 0)
+				track.Position = UDim2.new(1, -14, 0, 8)
+				track.Size = UDim2.fromOffset(switchW, switchH)
+				track.BackgroundColor3 = default and Theme.Toggle or Color3.fromRGB(60, 60, 65)
+				track.Text = ""
+				track.AutoButtonColor = false
+				track.ZIndex = 8
+				track.Parent = row
+				Round(switchH, track)
+
+				local knob = Instance.new("Frame")
+				knob.AnchorPoint = Vector2.new(0, 0.5)
+				knob.Position = UDim2.new(0, inset, 0.5, 0)
+				knob.Size = UDim2.fromOffset(knobSize, knobSize)
+				knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+				knob.BorderSizePixel = 0
+				knob.ZIndex = 9
+				knob.Parent = track
+				Round(knobSize, knob)
 
 				local state = default
 				if flag then Wolf.Flags[flag] = state end
 
-				local function refresh()
-					box.Text = state and "ON" or "OFF"
-					box.TextColor3 = state and Theme.Accent or Color3.fromRGB(180, 180, 180)
-					boxStroke.Transparency = state and 0.25 or 0.7
-					boxStroke.Color = Theme.Accent
+				local function refresh(animate)
+					local knobPos = state and UDim2.new(1, -(inset + knobSize), 0.5, 0) or UDim2.new(0, inset, 0.5, 0)
+					local trackColor = state and Theme.Toggle or Color3.fromRGB(60, 60, 65)
+					if animate then
+						Tween(knob, 0.16, { Position = knobPos })
+						Tween(track, 0.16, { BackgroundColor3 = trackColor })
+					else
+						knob.Position = knobPos
+						track.BackgroundColor3 = trackColor
+					end
 				end
+				refresh(false)
 
-				box.MouseButton1Click:Connect(function()
+				track.MouseButton1Click:Connect(function()
 					state = not state
 					if flag then Wolf.Flags[flag] = state end
-					refresh()
+					refresh(true)
 					callback(state)
 					CheckDependents()
 				end)
 
-				table.insert(Registered, { Type = "Element", Instance = row, Stroke = stroke, AccentBar = accentBar, Label = lbl, Icon = elementIcon, SubColor = box, State = function() return state end })
+				table.insert(Registered, { Type = "Element", Instance = row, Stroke = stroke, AccentBar = accentBar, Label = lbl, Icon = elementIcon, SubColor = track, State = function() return state end })
 
 				local obj = {}
 				function obj:Set(v)
 					state = v
 					if flag then Wolf.Flags[flag] = state end
-					refresh()
+					refresh(true)
 					callback(state)
 					CheckDependents()
 				end
@@ -2936,127 +2965,7 @@ function Wolf:CreateWindow(config)
 				return row
 			end
 
-			Section.Container = container
 			return Section
-		end
-
-		local ColumnHosts = {}
-
-		local function CreateColumnHost()
-			local host = Instance.new("Frame")
-			host.Size = UDim2.new(1, 0, 0, 0)
-			host.AutomaticSize = Enum.AutomaticSize.Y
-			host.BackgroundTransparency = 1
-			host.ZIndex = 6
-			host.Parent = page
-
-			local layout = Instance.new("UIListLayout")
-			layout.FillDirection = Enum.FillDirection.Horizontal
-			layout.HorizontalAlignment = Enum.HorizontalAlignment.Left
-			layout.VerticalAlignment = Enum.VerticalAlignment.Top
-			layout.Padding = UDim.new(0, 10)
-			layout.SortOrder = Enum.SortOrder.LayoutOrder
-			layout.Parent = host
-
-			local function update()
-				local width = host.AbsoluteSize.X
-				local vertical = width > 0 and width < 620
-				layout.FillDirection = vertical and Enum.FillDirection.Vertical or Enum.FillDirection.Horizontal
-				for _, child in ipairs(host:GetChildren()) do
-					if child:IsA("Frame") then
-						child.Size = vertical and UDim2.new(1, 0, 0, 0) or UDim2.new(0.5, -5, 0, 0)
-					end
-				end
-			end
-
-			Track(host:GetPropertyChangedSignal("AbsoluteSize"):Connect(update))
-			Track(host.ChildAdded:Connect(function() task.defer(update) end))
-			Track(host.ChildRemoved:Connect(function() task.defer(update) end))
-			update()
-			table.insert(ColumnHosts, host)
-			return host
-		end
-
-		local function GetColumnHost()
-			return ColumnHosts[1] or CreateColumnHost()
-		end
-
-
-		local function BindColumnMethods(column)
-			function column:CreateGroup(groupConfig)
-				local group = Tab:CreateSection(groupConfig or {Name = "Group"})
-				group.Container.Parent = self.Container
-				group.Container.Size = UDim2.new(1, 0, 0, 0)
-				group.Container.AutomaticSize = Enum.AutomaticSize.Y
-				return group
-			end
-
-			function column:CreateSection(sectionConfig)
-				return self:CreateGroup(sectionConfig)
-			end
-
-			function column:CreateToggle(...) return self:CreateGroup({Name = ""}):CreateToggle(...) end
-			function column:CreateSlider(...) return self:CreateGroup({Name = ""}):CreateSlider(...) end
-			function column:CreateButton(...) return self:CreateGroup({Name = ""}):CreateButton(...) end
-			function column:CreateBanner(...) return self:CreateGroup({Name = ""}):CreateBanner(...) end
-			function column:CreateHero(...) return self:CreateGroup({Name = ""}):CreateHero(...) end
-			function column:CreateCardGrid(...) return self:CreateGroup({Name = ""}):CreateCardGrid(...) end
-			function column:CreateDropdown(...) return self:CreateGroup({Name = ""}):CreateDropdown(...) end
-			function column:CreateColorPicker(...) return self:CreateGroup({Name = ""}):CreateColorPicker(...) end
-			function column:CreateInput(...) return self:CreateGroup({Name = ""}):CreateInput(...) end
-			function column:CreateKeybind(...) return self:CreateGroup({Name = ""}):CreateKeybind(...) end
-			function column:CreateProgressBar(...) return self:CreateGroup({Name = ""}):CreateProgressBar(...) end
-			function column:CreateLabel(...) return self:CreateGroup({Name = ""}):CreateLabel(...) end
-			function column:CreateParagraph(...) return self:CreateGroup({Name = ""}):CreateParagraph(...) end
-			function column:CreateDivider(...) return self:CreateGroup({Name = ""}):CreateDivider(...) end
-			return column
-		end
-
-		function Tab:CreateGroup(groupConfig)
-			local group = Tab:CreateSection(groupConfig or {Name = "Group"})
-			local host = GetColumnHost()
-			group.Container.Parent = host
-			group.Container.Size = UDim2.new(1, 0, 0, 0)
-			group.Container.AutomaticSize = Enum.AutomaticSize.Y
-			return group
-		end
-
-		function Tab:CreateColumn(columnConfig)
-			local host = GetColumnHost()
-			local column = Instance.new("Frame")
-			column.Size = UDim2.new(1, 0, 0, 0)
-			column.AutomaticSize = Enum.AutomaticSize.Y
-			column.BackgroundTransparency = 1
-			column.BorderSizePixel = 0
-			column.ZIndex = 6
-			column.LayoutOrder = #host:GetChildren() + 1
-			column.Parent = host
-
-			local padding = Instance.new("UIPadding")
-			padding.PaddingBottom = UDim.new(0, 2)
-			padding.Parent = column
-
-			local layout = Instance.new("UIListLayout")
-			layout.Padding = UDim.new(0, 8)
-			layout.SortOrder = Enum.SortOrder.LayoutOrder
-			layout.Parent = column
-
-			local cfg = NormalizeArgs(columnConfig) or {}
-			local columnName = cfg.Name or cfg.Title
-			if columnName and columnName ~= "" then
-				local header = Instance.new("TextLabel")
-				header.Size = UDim2.new(1, 0, 0, 22)
-				header.BackgroundTransparency = 1
-				header.Text = string.upper(tostring(columnName))
-				header.Font = Enum.Font.GothamBold
-				header.TextSize = 11
-				header.TextColor3 = Theme.Placeholder
-				header.TextXAlignment = Enum.TextXAlignment.Left
-				header.ZIndex = 7
-				header.Parent = column
-			end
-
-			return BindColumnMethods({Container = column, Host = host})
 		end
 
 		function Tab:CreateDivider()
